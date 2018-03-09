@@ -717,10 +717,20 @@ class Driver {
    * @return {string}
    */
   getRequestContent(requestId) {
-    return this.sendCommand('Network.getResponseBody', {
-      requestId,
-    // Ignoring result.base64Encoded, which indicates if body is already encoded
-    }).then(result => result.body);
+    return new Promise((resolve, reject) => {
+      // If this takes more than 2s, reject the Promise.
+      const err = new Error('Fetching resource content has exceeded the allotted time of 2s');
+      const asyncTimeout = setTimeout((_ => reject(err)), 2000);
+
+      this.sendCommand('Network.getResponseBody', {requestId}).then(result => {
+        clearTimeout(asyncTimeout);
+        // Ignoring result.base64Encoded, which indicates if body is already encoded
+        resolve(result.body);
+      }).catch(e => {
+        clearTimeout(asyncTimeout);
+        reject(e);
+      });
+    });
   }
 
   /**
