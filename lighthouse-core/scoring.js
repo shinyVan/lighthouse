@@ -22,14 +22,7 @@ class ReportScoring {
   static arithmeticMean(items) {
     const results = items.reduce(
       (result, item) => {
-        // HACK. remove this in the next PR
-        // Srsly. The score inconsitency has been very bad.
-        let itemScore = item.score;
-        if (typeof item.score === 'boolean') {
-          itemScore = item.score ? 100 : 0;
-        }
-
-        const score = Number(itemScore) || 0;
+        const score = Number(item.score) || 0;
         const weight = Number(item.weight) || 0;
         return {
           weight: result.weight + weight,
