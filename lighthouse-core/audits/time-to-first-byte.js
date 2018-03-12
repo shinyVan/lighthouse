@@ -40,7 +40,7 @@ class TTFBMetric extends Audit {
 
     return artifacts.requestNetworkRecords(devtoolsLogs)
       .then((networkRecords) => {
-        let debugString = '';
+        let displayValue = '';
 
         const finalUrl = artifacts.URL.finalUrl;
         const finalUrlRequest = networkRecords.find(record => record._url === finalUrl);
@@ -48,20 +48,23 @@ class TTFBMetric extends Audit {
         const passed = ttfb < TTFB_THRESHOLD;
 
         if (!passed) {
-          debugString = `Root document took ${Util.formatMilliseconds(ttfb, 1)} ` +
-            'to get the first byte.';
+          displayValue = `Root document took ${Util.formatMilliseconds(ttfb, 1)} `;
         }
 
         return {
           rawValue: ttfb,
           score: passed,
-          displayValue: Util.formatMilliseconds(ttfb),
+          displayValue,
+          details: {
+            summary: {
+              wastedMs: ttfb - TTFB_THRESHOLD,
+            },
+          },
           extendedInfo: {
             value: {
               wastedMs: ttfb - TTFB_THRESHOLD,
             },
           },
-          debugString,
         };
       });
   }

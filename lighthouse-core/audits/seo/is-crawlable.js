@@ -6,6 +6,8 @@
 'use strict';
 
 const Audit = require('../audit');
+const robotsParser = require('robots-parser');
+const URL = require('../../lib/url-shim');
 const BLOCKLIST = new Set([
   'noindex',
   'none',
@@ -63,9 +65,10 @@ class IsCrawlable extends Audit {
       name: 'is-crawlable',
       description: 'Page isn’t blocked from indexing',
       failureDescription: 'Page is blocked from indexing',
-      helpText: 'The "Robots" directives tell crawlers how your content should be indexed. ' +
-      '[Learn more](https://developers.google.com/search/reference/robots_meta_tag).',
-      requiredArtifacts: ['MetaRobots'],
+      helpText: 'Search engines are unable to include your pages in search results ' +
+          'if they don\'t have permission to crawl them. [Learn ' +
+          'more](https://developers.google.com/lighthouse/audits/indexing).',
+      requiredArtifacts: ['MetaRobots', 'RobotsTxt'],
     };
   }
 
@@ -96,8 +99,22 @@ class IsCrawlable extends Audit {
             hasBlockingDirective(h.value))
           .forEach(h => blockingDirectives.push({source: `${h.name}: ${h.value}`}));
 
+        if (artifacts.RobotsTxt.content) {
+          const robotsFileUrl = new URL('/robots.txt', mainResource.url);
+          const robotsTxt = robotsParser(robotsFileUrl.href, artifacts.RobotsTxt.content);
+
+          if (!robotsTxt.isAllowed(mainResource.url)) {
+            blockingDirectives.push({
+              source: {
+                type: 'url',
+                text: robotsFileUrl.href,
+              },
+            });
+          }
+        }
+
         const headings = [
-          {key: 'source', itemType: 'code', text: 'Source'},
+          {key: 'source', itemType: 'code', text: 'Blocking Directive Source'},
         ];
         const details = Audit.makeTableDetails(headings, blockingDirectives);
 

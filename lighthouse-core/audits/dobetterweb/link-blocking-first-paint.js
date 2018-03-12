@@ -12,7 +12,7 @@
 
 const Audit = require('../audit');
 const Util = require('../../report/v2/renderer/util.js');
-const scoreForWastedMs = require('../byte-efficiency/byte-efficiency-audit').scoreForWastedMs;
+const ByteEfficiencyAudit = require('../byte-efficiency/byte-efficiency-audit');
 
 // Because of the way we detect blocking stylesheets, asynchronously loaded
 // CSS with link[rel=preload] and an onload handler (see https://github.com/filamentgroup/loadCSS)
@@ -59,15 +59,17 @@ class LinkBlockingFirstPaintAudit extends Audit {
         filtered.reduce((t, item) => Math.min(t, item.startTime), Number.MAX_VALUE);
     let endTime = 0;
 
-    const results = filtered.map(item => {
-      endTime = Math.max(item.endTime, endTime);
+    const results = filtered
+      .map(item => {
+        endTime = Math.max(item.endTime, endTime);
 
-      return {
-        url: item.tag.url,
-        totalKb: Util.formatBytesToKB(item.transferSize),
-        totalMs: Util.formatMilliseconds(Math.round((item.endTime - startTime) * 1000), 1),
-      };
-    });
+        return {
+          url: item.tag.url,
+          totalBytes: item.transferSize,
+          wastedMs: (item.endTime - startTime) * 1000,
+        };
+      })
+      .sort((a, b) => b.wastedMs - a.wastedMs);
 
     const rawDelayTime = Math.round((endTime - startTime) * 1000);
     const delayTime = Util.formatMilliseconds(rawDelayTime, 1);
@@ -80,23 +82,24 @@ class LinkBlockingFirstPaintAudit extends Audit {
 
     const headings = [
       {key: 'url', itemType: 'url', text: 'URL'},
-      {key: 'totalKb', itemType: 'text', text: 'Size (KB)'},
-      {key: 'totalMs', itemType: 'text', text: 'Delayed Paint By (ms)'},
+      {key: 'totalBytes', itemType: 'bytes', displayUnit: 'kb', granularity: 0.01,
+        text: 'Size (KB)'},
+      {key: 'wastedMs', itemType: 'ms', text: 'Delayed Paint By (ms)', granularity: 1},
     ];
 
-    const tableDetails = Audit.makeTableDetails(headings, results);
+    const summary = {wastedMs: rawDelayTime};
+    const details = Audit.makeTableDetails(headings, results, summary);
 
     return {
       displayValue,
-      score: scoreForWastedMs(rawDelayTime),
+      score: ByteEfficiencyAudit.scoreForWastedMs(rawDelayTime),
       rawValue: rawDelayTime,
       extendedInfo: {
         value: {
-          wastedMs: delayTime,
           results,
         },
       },
-      details: tableDetails,
+      details,
     };
   }
 

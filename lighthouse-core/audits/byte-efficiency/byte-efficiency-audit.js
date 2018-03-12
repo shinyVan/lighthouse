@@ -6,7 +6,6 @@
 'use strict';
 
 const Audit = require('../audit');
-const Util = require('../../report/v2/renderer/util');
 const PredictivePerf = require('../predictive-perf');
 const LoadSimulator = require('../../lib/dependency-graph/simulator/simulator.js');
 
@@ -33,30 +32,12 @@ class UnusedBytes extends Audit {
 
   /**
    * @param {number} bytes
-   * @return {string}
-   */
-  static bytesToKbString(bytes) {
-    return Util.formatBytesToKB(bytes, 0);
-  }
-
-  /**
-   * @param {number} bytes
-   * @param {number} percent
-   * @return {string}
-   */
-  static toSavingsString(bytes = 0, percent = 0) {
-    const kbDisplay = this.bytesToKbString(bytes);
-    const percentDisplay = Util.formatNumber(Math.round(percent)) + '%';
-    return `${kbDisplay} (${percentDisplay})`;
-  }
-
-  /**
-   * @param {number} bytes
    * @param {number} networkThroughput measured in bytes/second
    * @return {string}
    */
-  static bytesToMsString(bytes, networkThroughput) {
-    return Util.formatMilliseconds(bytes / networkThroughput * 1000, 10);
+  static bytesToMs(bytes, networkThroughput) {
+    const milliseconds = bytes / networkThroughput * 1000;
+    return milliseconds;
   }
 
   /**
@@ -155,15 +136,7 @@ class UnusedBytes extends Audit {
    */
   static createAuditResult(result, graph) {
     const debugString = result.debugString;
-    const results = result.results
-      .map(item => {
-        const wastedPercent = 100 * item.wastedBytes / item.totalBytes;
-        item.wastedKb = this.bytesToKbString(item.wastedBytes);
-        item.totalKb = this.bytesToKbString(item.totalBytes);
-        item.potentialSavings = this.toSavingsString(item.wastedBytes, wastedPercent);
-        return item;
-      })
-      .sort((itemA, itemB) => itemB.wastedBytes - itemA.wastedBytes);
+    const results = result.results.sort((itemA, itemB) => itemB.wastedBytes - itemA.wastedBytes);
 
     const wastedBytes = results.reduce((sum, item) => sum + item.wastedBytes, 0);
     const wastedKb = Math.round(wastedBytes / KB_IN_BYTES);
@@ -171,11 +144,14 @@ class UnusedBytes extends Audit {
 
     let displayValue = result.displayValue || '';
     if (typeof result.displayValue === 'undefined' && wastedBytes) {
-      const wastedKbDisplay = this.bytesToKbString(wastedBytes);
-      displayValue = `Potential savings of ${wastedKbDisplay}`;
+      displayValue = `Potential savings of ${wastedBytes} bytes`;
     }
 
-    const tableDetails = Audit.makeTableDetails(result.headings, results);
+    const summary = {
+      wastedMs,
+      wastedBytes,
+    };
+    const details = Audit.makeTableDetails(result.headings, results, summary);
 
     return {
       debugString,
@@ -189,7 +165,7 @@ class UnusedBytes extends Audit {
           results,
         },
       },
-      details: tableDetails,
+      details,
     };
   }
 

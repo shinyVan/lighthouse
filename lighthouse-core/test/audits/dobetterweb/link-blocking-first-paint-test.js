@@ -30,6 +30,12 @@ describe('Link Block First Paint audit', () => {
         {
           tag: linkDetails,
           transferSize: 100,
+          startTime: 4.9,
+          endTime: 5.1,
+        },
+        {
+          tag: linkDetails,
+          transferSize: 100,
           startTime: 5,
           endTime: 5.4,
         },
@@ -48,12 +54,6 @@ describe('Link Block First Paint audit', () => {
         {
           tag: linkDetails,
           transferSize: 100,
-          startTime: 4.9,
-          endTime: 5.1,
-        },
-        {
-          tag: linkDetails,
-          transferSize: 100,
           startTime: 4.7,
           endTime: 4.73, // should be ignored for being <50ms
         },
@@ -68,11 +68,11 @@ describe('Link Block First Paint audit', () => {
       assert.equal(auditResult.displayValue, `2 resources delayed first paint by 500${NBSP}ms`);
       const results = auditResult.details.items;
       assert.equal(results.length, 2);
-      assert.ok(results[0][0].text.includes('css/style.css'), 'has a url');
-      assert.equal(results[0][1].text, `0.1${NBSP}KB`);
-      assert.equal(results[1][1].text, `0.1${NBSP}KB`);
-      assert.equal(results[0][2].text, `500${NBSP}ms`);
-      assert.equal(results[1][2].text, `200${NBSP}ms`);
+      assert.ok(results[0].url.includes('css/style.css'), 'has a url');
+      assert.equal(results[0].totalBytes, 100);
+      assert.equal(results[1].totalBytes, 100);
+      assert.equal(results[0].wastedMs, 500);
+      assert.equal(Math.round(results[1].wastedMs), 200);
     });
   });
 
