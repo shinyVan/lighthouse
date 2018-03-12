@@ -72,6 +72,13 @@ class TcpConnection {
   }
 
   /**
+   * @return {boolean}
+   */
+  isWarm() {
+    return this._warmed;
+  }
+
+  /**
    * Sets the number of excess bytes that are available to this connection on future downloads, only
    * applies to H2 connections.
    * @param {number} bytes
@@ -89,8 +96,8 @@ class TcpConnection {
    *  https://hpbn.co/transport-layer-security-tls/#tls-handshake for details.
    *
    * @param {number} bytesToDownload
-   * @param {{timeAlreadyElapsed: number, maximumTimeToElapse}=} options
-   * @return {{timeElapsed: number, roundTrips: number, bytesDownloaded: number, congestionWindow: number}}
+   * @param {DownloadOptions} [options]
+   * @return {DownloadResults}
    */
   simulateDownloadUntil(bytesToDownload, options) {
     const {timeAlreadyElapsed = 0, maximumTimeToElapse = Infinity} = options || {};
@@ -157,3 +164,18 @@ class TcpConnection {
 }
 
 module.exports = TcpConnection;
+
+/**
+ * @typedef DownloadOptions
+ * @property {number} [timeAlreadyElapsed]
+ * @property {number} [maximumTimeToElapse]
+ */
+
+/**
+ * @typedef DownloadResults
+ * @property {number} roundTrips
+ * @property {number} timeElapsed
+ * @property {number} bytesDownloaded
+ * @property {number} extraBytesDownloaded
+ * @property {number} congestionWindow
+ */
